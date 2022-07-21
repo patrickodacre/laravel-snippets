@@ -12,4 +12,5 @@ class Knight extends Model
     use SoftDeletes;
 
     protected $table = 'knights';
+    protected $guarded = [];
 }
