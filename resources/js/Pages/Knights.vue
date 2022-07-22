@@ -24,6 +24,10 @@ onMounted(() => {
 	// make sure we clear the knight being deleted if we cancel / close the confirm modal
 	state.modal_knight_delete_confirm._element.addEventListener('hide.bs.modal', () => {
 		state.deleting_knight = null
+
+		// also clear the form in case we were editing before initializing a delete
+		state.knight = newKnight()
+		state.editing_knight = null
 	})
 })
 
@@ -172,16 +176,26 @@ function saveKnight()
                 	<div v-for="_knight in state.knights" :key="_knight.id"
                 	class="list-group-item py-3"
                 	style="
-                	display: flex;
-                	align-items: center;
-                	justify-content: space-between;
+	                	display: flex;
+	                	align-items: center;
+	                	justify-content: space-between;
                 	"
                 	>
+	                	<!-- LEFT section -->
                 		<div class="ln-list-item__left">
-	                		{{_knight.name}}
+                			<div class="heading">
+		                		{{_knight.name}}
+                			</div>
+                			<div class="sub-heading">
+                				Some subtext here. Perhaps a longer description.
+                			</div>
                 		</div>
 
+                		<!-- RIGHT section -->
                 		<div class="ln-list-item__right">
+
+                			<!-- Actions are laid our horizontally -->
+                			<!-- All buttons are wrapped in divs to make sure FLEX works consistently across all browsers -->
                 			<div class="ln-list-item__action me-2">
                 				<button
                 					class="btn btn-outline-secondary"
@@ -192,6 +206,7 @@ function saveKnight()
             					</button>
                 			</div>
 
+                			<!-- Confirm before deleting a Knight -->
                 			<div class="ln-list-item__action">
                 				<button
                 					class="btn btn-danger"

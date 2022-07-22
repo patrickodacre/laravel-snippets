@@ -1,3 +1,7 @@
+// COLORs
+$grey : #888;
+
+
 .ln-max-width {
 	max-width: 80rem;
 }
@@ -17,11 +21,12 @@
 
 .heading {
 	font-size:  1.4rem;
-	margin-bottom:  0.5rem;
+	margin-bottom:  0.25rem;
 }
 
 .sub-heading {
 	font-size:  1.1rem;
+	color: $grey;
 }
 
 .bg-gray {
@@ -44,7 +49,8 @@
 	justify-content: space-between;
 }
 
-.ln-list-item__left,
+.ln-list-item__left {}
+
 .ln-list-item__right,
 .ln-list-item__action {
 	display: flex;
