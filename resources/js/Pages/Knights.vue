@@ -13,7 +13,6 @@ const state = reactive({
 })
 
 const props = defineProps({
-    team: Object,
     knights: Array,
 });
 
@@ -101,7 +100,7 @@ function saveKnight()
 		return
 	}
 
-    axios.post(route('knights_store', {team: props.team, name: state.knight.name}))
+    axios.post(route('knights_store', {name: state.knight.name}))
 	    .then(res => {
 
 	    	// clear the form
@@ -113,8 +112,6 @@ function saveKnight()
 	    })
 
 }
-
-
 
 </script>
 
