@@ -33,5 +33,9 @@ Route::middleware([
         return Inertia::render('Dashboard');
     })->name('dashboard');
 
+    Route::get('/clients', 'ClientController@index')->name('clients');
+    Route::put('/clients/{client}', 'ClientController@update')->name('clients_update');
+    Route::post('/clients', 'ClientController@store')->name('clients_store');
+    Route::delete('clients/{client}', 'ClientController@delete')->name('clients_delete');
 
 });
