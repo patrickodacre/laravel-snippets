@@ -23,11 +23,11 @@ onMounted(() => {
 
 	// make sure we clear the client being deleted if we cancel / close the confirm modal
 	state.modal_client_delete_confirm._element.addEventListener('hide.bs.modal', () => {
-		state.deleting_client = null
+		state.editing_client = null
 
 		// also clear the form in case we were editing before initializing a delete
 		state.client = newClient()
-		state.editing_client = null
+		state.deleting_client = null
 	})
 })
 
