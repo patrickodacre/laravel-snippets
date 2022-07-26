@@ -33,9 +33,5 @@ Route::middleware([
         return Inertia::render('Dashboard');
     })->name('dashboard');
 
-    Route::get('/knights', 'KnightController@index')->name('knights');
-    Route::put('/knights/{knight}', 'KnightController@update')->name('knights_update');
-    Route::post('/knights', 'KnightController@store')->name('knights_store');
-    Route::delete('knights/{knight}', 'KnightController@delete')->name('knights_delete');
 
 });

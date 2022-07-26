@@ -54,9 +54,6 @@ const logout = () => {
                                 <JetNavLink :href="route('dashboard')" :active="route().current('dashboard')">
                                     Dashboard
                                 </JetNavLink>
-                                <JetNavLink :href="route('knights', $page.props.user.current_team.id)" :active="route().current('knights')">
-                                    Knights
-                                </JetNavLink>
 
                             </div>
                         </div>
