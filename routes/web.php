@@ -38,4 +38,16 @@ Route::middleware([
     Route::post('/clients', 'ClientController@store')->name('clients_store');
     Route::delete('clients/{client}', 'ClientController@delete')->name('clients_delete');
 
+
+    Route::get('/tags', 'TagController@index')->name('tags');
+
+    Route::post('/tags', 'TagController@createTag')->name('tag_create');
+    Route::post('/categories', 'TagController@createCategory')->name('category_create');
+
+    Route::put('/tags/{tag}', 'TagController@updateTag')->name('tag_update');
+    Route::put('/categories/{category}', 'TagController@updateCategory')->name('category_update');
+
+    Route::delete('tags/{tag}', 'TagController@deleteTag')->name('tag_delete');
+    Route::delete('categories/{category}', 'TagController@deleteCategory')->name('category_delete');
+
 });

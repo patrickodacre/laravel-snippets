@@ -47,6 +47,22 @@ $grey : #888;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
+
+}
+
+.list-group {
+	.is_editing {
+		background-color: #c6e4d6;
+	}
+}
+
+.ln-list-item__top,
+.ln_list-item__bottom {
+	padding: 0.5rem;
+}
+
+.ln-list-item__top {
+	margin-bottom: 1rem;
 }
 
 .ln-list-item__left {}
