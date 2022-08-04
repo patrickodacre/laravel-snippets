@@ -39,6 +39,32 @@ $grey : #888;
 
 
 .ln-list {
+
+
+	// nested list
+	.ln-list {
+		margin-top: 1rem;
+	}
+
+	.ln-list-item {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		min-height: 100px;
+		border-bottom: 1px solid #d5d5d5;
+		border-radius: 4px;
+		margin-bottom: 1rem;
+	}
+
+	.ln-list-item__actions {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+
+		.ln-list-item__action:nth-last-child(n+2) {
+			margin-right: 0.5rem;
+		}
+	}
 }
 
 .ln-list-item {
@@ -50,10 +76,8 @@ $grey : #888;
 
 }
 
-.list-group {
-	.is_editing {
-		background-color: #c6e4d6;
-	}
+.list-group-heading {
+	display: flex;
 }
 
 .ln-list-item__top,

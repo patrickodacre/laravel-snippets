@@ -1,39 +1,56 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { reactive, onMounted } from 'vue'
-
-const state = reactive({
-	category: newCategory(),
-	categories: [],
-	editing_category: null,
-	deleting_category: null,
-
-	tag: newTag(),
-	editing_tag: null,
-	deleting_tag: null,
-	deleting_tag_from_category: null,
-
-	modal_category_delete_confirm: null,
-	modal_tag_delete_confirm: null,
-})
+import Modal from "@/Shared/Modal.vue"
 
 const props = defineProps({
 	// tags are nested in categories
     categories: Array,
+    types: Array,
 });
+
+const state = reactive({
+	categories: [],
+
+	category: newCategory(),
+	editing_category: null,
+	deleting_category: null,
+	viewing_category: null,
+
+	tag: newTag(),
+	editing_tag: null,
+	deleting_tag: null,
+
+	modal_category_form: null,
+	modal_category_delete_confirm: null,
+
+	modal_tag_form: null,
+	modal_tag_delete_confirm: null,
+})
 
 onMounted(() => {
 	state.categories = props.categories
 
-	state.modal_category_delete_confirm = new bootstrap.Modal('#modal_category_delete_confirm', {})
-	state.modal_tag_delete_confirm = new bootstrap.Modal('#modal_tag_delete_confirm', {})
+	// Create / Edit
+	state.modal_category_form = new bootstrap.Modal('#modal_category_form', {})
+	state.modal_category_form._element.addEventListener('hide.bs.modal', () => {
+		cancelEditCategory()
+	})
 
+	state.modal_tag_form = new bootstrap.Modal('#modal_tag_form', {})
+	state.modal_tag_form._element.addEventListener('hide.bs.modal', () => {
+		cancelEditTag()
+	})
+
+	// Delete
+	state.modal_category_delete_confirm = new bootstrap.Modal('#modal_category_delete_confirm', {})
 	state.modal_category_delete_confirm._element.addEventListener('hide.bs.modal', () => {
 		state.editing_category = null
 		state.category = newCategory()
 		state.deleting_category = null
 	})
 
+	state.modal_tag_delete_confirm = new bootstrap.Modal('#modal_tag_delete_confirm', {})
 	state.modal_tag_delete_confirm._element.addEventListener('hide.bs.modal', () => {
 		state.editing_tag = null
 		state.tag = newTag()
@@ -42,18 +59,21 @@ onMounted(() => {
 
 })
 
-function newTag()
+/* ======================
+	Categories
+====================== */
+
+function newCategory_init()
 {
-	return {
-		name: null,
-		description: null,
-		category_id: null,
-	}
+	state.category = newCategory()
+	state.editing_category = null
+	state.modal_category_form.show()
 }
 
 function newCategory()
 {
 	return {
+		type_id: null,
 		name: null,
 		description: null,
 	}
@@ -67,48 +87,25 @@ function editCategory(_category)
 	// so our tags list isn't reset when we do things
 	// like EDIT category after adding new tags
 	state.editing_category = _category
-}
 
-function editTag(_tag)
-{
-	// avoid mutating by reference
-	state.editing_tag = JSON.parse(JSON.stringify(_tag))
-	state.tag = JSON.parse(JSON.stringify(_tag))
+	state.modal_category_form.show()
 }
 
 function cancelEditCategory()
 {
 	state.editing_category = null
 	state.category = newCategory()
-	state.tag = newTag()
 }
-
-function cancelEditTag()
-{
-	state.editing_tag = null
-	state.tag = newTag()
-}
-
-
 
 function deleteCategory_init(category)
 {
 	state.editing_category = null
+	state.viewing_category = null
 	state.deleting_category = category
 
 	state.modal_category_delete_confirm.show()
 }
 
-function deleteTag_init(tag)
-{
-	// NOTE:: do not reset editing_category
-	// it keeps the tags displayed properly
-	state.editing_tag = null
-	state.deleting_tag_from_category = state.editing_category
-	state.deleting_tag = tag
-
-	state.modal_tag_delete_confirm.show()
-}
 
 function deleteCategory()
 {
@@ -128,34 +125,16 @@ function deleteCategory()
 		})
 }
 
-function deleteTag()
-{
-
-	axios.delete(route('tag_delete', {tag: state.deleting_tag.id}))
-		.then(res => {
-
-			state.editing_category.tags = state.editing_category.tags
-				.filter(t => t.id != state.deleting_tag.id)
-
-			state.deleting_tag = null
-			state.deleting_tag_from_category = null
-
-			state.modal_tag_delete_confirm.hide()
-
-		})
-		.catch(err => {
-			debugger
-		})
-}
-
 function saveCategory()
 {
+	const {name, description, type_id} = state.category
+
 	if (state.editing_category && state.editing_category.id)
 	{
-
 	    axios.put(route('category_update', {category: state.editing_category.id}), {
-	    	name: state.category.name,
-	    	description: state.category.description,
+	    	name,
+	    	description,
+	    	type_id,
 	    })
 	    .then(res => {
 	    	const c = res.data.category
@@ -164,9 +143,11 @@ function saveCategory()
 	    	{
 	    		if (state.categories[i].id === c.id)
 	    		{
-	    			state.categories[i] = c
+	    			state.categories[i] = {...state.categories[i], ...c}
 	    		}
 	    	}
+
+	    	state.modal_category_form.hide()
 
 	    })
 	    .catch(err => {
@@ -178,14 +159,17 @@ function saveCategory()
 	}
 
     axios.post(route('category_create', {
-    	name: state.category.name,
-    	description: state.category.description,
+    	name,
+    	description,
+    	type_id,
     }))
 	    .then(res => {
 
 	    	// clear the form
 	    	state.category = newCategory()
 	    	state.categories.push(res.data.category)
+
+	    	state.modal_category_form.hide()
 	    })
 	    .catch(err => {
 	    	debugger
@@ -193,9 +177,96 @@ function saveCategory()
 
 }
 
+
+
+/* ======================
+	Tags
+====================== */
+
+function toggleViewTags(_category)
+{
+	if (! state.viewing_category)
+	{
+		state.viewing_category = _category
+	}
+	// changing to another category
+	else if (state.viewing_category.id !== _category.id)
+	{
+		state.viewing_category = _category
+	}
+	else
+	{
+		state.viewing_category = null
+	}
+}
+
+function newTag_init()
+{
+	state.tag = newTag()
+	state.editing_tag = null
+	state.modal_tag_form.show()
+}
+
+function newTag()
+{
+	return {
+		name: null,
+		description: null,
+		category_id: null,
+	}
+}
+
+function editTag(_tag)
+{
+	// avoid mutating by reference
+	state.tag = JSON.parse(JSON.stringify(_tag))
+	state.editing_tag = _tag
+
+	state.modal_tag_form.show()
+}
+
+function cancelEditTag()
+{
+	state.editing_tag = null
+	state.tag = newTag()
+}
+
+
+function deleteTag_init(tag)
+{
+	// NOTE:: do not reset editing_category
+	// it keeps the tags displayed properly
+	state.editing_tag = null
+	state.deleting_tag = tag
+
+	state.modal_tag_delete_confirm.show()
+}
+
+function deleteTag()
+{
+
+	axios.delete(route('tag_delete', {tag: state.deleting_tag.id}))
+		.then(res => {
+
+			state.viewing_category.tags = state.viewing_category.tags
+				.filter(t => t.id != state.deleting_tag.id)
+
+			state.deleting_tag = null
+
+			state.modal_tag_delete_confirm.hide()
+
+		})
+		.catch(err => {
+			debugger
+		})
+}
+
 function saveTag()
 {
-	if (!state.editing_category || !state.editing_category.id)
+
+	const {name, description} = state.tag
+
+	if (!state.viewing_category || !state.viewing_category.id)
 	{
 		return
 	}
@@ -204,20 +275,21 @@ function saveTag()
 	{
 
 	    return axios.put(route('tag_update', {tag: state.editing_tag.id}), {
-	    	name: state.tag.name,
-	    	description: state.tag.description,
+	    	name,
+	    	description,
 	    })
 	    .then(res => {
 	    	const c = res.data.tag
 
-	    	for (let i = 0; i < state.editing_category.tags.length; i++)
+	    	for (let i = 0; i < state.viewing_category.tags.length; i++)
 	    	{
-	    		if (state.editing_category.tags[i].id === c.id)
+	    		if (state.viewing_category.tags[i].id === c.id)
 	    		{
-	    			state.editing_category.tags[i] = c
+	    			state.viewing_category.tags[i] = c
 	    		}
 	    	}
 
+	    	state.modal_tag_form.hide()
 	    })
 	    .catch(err => {
 	    	debugger
@@ -226,15 +298,17 @@ function saveTag()
 	}
 
     axios.post(route('tag_create', {
-    	name: state.tag.name,
-    	description: state.tag.description,
-    	category_id: state.editing_category.id,
+    	name,
+    	description,
+    	category_id: state.viewing_category.id,
     }))
 	    .then(res => {
 
 	    	// clear the form
 	    	state.tag = newTag()
-	    	state.editing_category.tags.push(res.data.tag)
+	    	state.viewing_category.tags.push(res.data.tag)
+
+	    	state.modal_tag_form.hide()
 	    })
 	    .catch(err => {
 	    	debugger
@@ -255,62 +329,37 @@ function saveTag()
 
         <div class="py-12">
 			<div class="mb-3 p-4 bg-white shadow bg-body rounded w-75 ln-max-width mx-auto">
-				<div class="mx-auto mb-3">
-					<div class="px-2 mb-3">
-						<h2 class="heading">Manage Your Tags</h2>
-						<p class="">
+
+				<div class="
+					px-2
+					d-md-flex align-items-center justify-content-between">
+
+					<div class="flex-1">
+						<div class="heading">Manage Your Tags</div>
+						<div class="sub-heading">
 							Use the form to create and edit Tags and Tag Categories.
-						</p>
+						</div>
 					</div>
-
-					<!-- Start Category Form -->
-					<div class="px-2 d-md-flex align-items-end mb-3">
-						<div class="flex-1 mb-3 mb-md-0 me-md-5">
-							<label for="name" class="form-label">Category Name</label>
-							<input
-								id="name"
-								type="text"
-								class="form-control"
-								placeholder="Technologies"
-								v-model="state.category.name"
-								>
-						</div>
-
-						<div class="flex-1 mb-3 mb-md-0">
-							<label for="description" class="form-label">Description</label>
-							<input
-								id="description"
-								type="text"
-								class="form-control"
-								v-model="state.category.description"
-								>
-						</div>
-
-						<div class="ms-auto mb-3 mb-md-0 me-md-3">
+					<div class="ms-auto d-md-flex align-items-center">
+						<div class="">
 							<button
 								type="button"
 								class="btn btn-success"
-								style="min-width:100px;"
-								@click="saveCategory"
-								>
-								Save Category
+								@click="newCategory_init"
+							>
+								+ New Category
 							</button>
 						</div>
-						<div class="ms-3 mb-3 mb-md-0">
-							<button
-								type="button"
-								class="btn btn-outline-dark"
-								@click="cancelEditCategory"
-								>
-									Cancel / Clear Form
-								</button>
-						</div>
 					</div>
-					<!-- End Category Form -->
 
 				</div>
 
+				<div class="mx-auto mb-3">
 
+					<div class="px-2 mb-3">
+					</div>
+
+				</div>
 
 			</div>
 
@@ -323,7 +372,6 @@ function saveTag()
 	                	class="list-group-item py-3"
 	            	>
 		        		<div class="ln-list-item__top"
-		        			:class="{is_editing: state.editing_category && _category.id == state.editing_category.id}"
 		                	style="
 			                	display: flex;
 			                	align-items: center;
@@ -335,6 +383,9 @@ function saveTag()
 	                			<div class="heading">
 			                		{{_category.name}}
 	                			</div>
+	                			<div class="sub-heading">
+	                				{{ _category.description }}
+	                			</div>
 	                		</div>
 
 	                		<!-- RIGHT section -->
@@ -344,25 +395,26 @@ function saveTag()
 	                			<!-- All buttons are wrapped in divs to make sure FLEX works consistently across all browsers -->
 	                			<div class="ln-list-item__action me-2">
 	                				<button
+	                					class="btn"
+	                					:class="{
+	                						'btn-secondary': state.viewing_category && (state.viewing_category.id === _category.id),
+	                						'btn-outline-secondary': ! state.viewing_category || (state.viewing_category.id !== _category.id),
+	                					}"
+	                					type="button"
+	                					@click="toggleViewTags(_category)"
+	                					>
+	                						<span v-if="! state.viewing_category || (state.viewing_category.id !== _category.id)">View Tags</span>
+	                						<span v-else>Hide Tags</span>
+	            					</button>
+	                			</div>
+
+	                			<div class="ln-list-item__action me-2">
+	                				<button
 	                					class="btn btn-outline-secondary"
 	                					type="button"
 	                					@click="editCategory(_category)"
 	                					>
 	                						Edit
-	            					</button>
-	                			</div>
-
-	                			<div
-	                				v-if="state.editing_category
-		                				&& state.editing_category.id == _category.id"
-	                				class="ln-list-item__action me-2"
-	                			>
-	                				<button
-	                					class="btn btn-dark"
-	                					type="button"
-	                					@click="cancelEditCategory"
-	                					>
-	                						X Cancel X
 	            					</button>
 	                			</div>
 
@@ -383,70 +435,31 @@ function saveTag()
 						<!-- Nested List -->
 						<div class="ln-list-item__bottom"
 						>
-
 							<template
 								v-if="
-									state.editing_category
-									&& state.editing_category.id == _category.id
-								"
-							>
-								<!-- Start Tag Form -->
-								<div class="px-2 d-md-flex align-items-end mb-3" v-if="state.editing_category && state.editing_category.id">
-									<div class="flex-1 mb-3 mb-md-0 me-md-5">
-										<label for="name" class="form-label">Tag Name</label>
-										<input
-											id="name"
-											type="text"
-											class="form-control"
-											placeholder="Technologies"
-											v-model="state.tag.name"
-											>
-									</div>
-
-									<div class="flex-1 mb-3 mb-md-0">
-										<label for="description" class="form-label">Description</label>
-										<input
-											id="description"
-											type="text"
-											class="form-control"
-											v-model="state.tag.description"
-											>
-									</div>
-
-									<div class="ms-auto mb-3 mb-md-0 me-md-3">
-										<button
-											type="button"
-											class="btn btn-success"
-											style="min-width:100px;"
-											@click="saveTag"
-											>
-											Save Tag
-										</button>
-									</div>
-									<div class="ms-3 mb-3 mb-md-0">
-										<button
-											type="button"
-											class="btn btn-outline-dark"
-											@click="cancelEditTag"
-											>
-												Cancel / Clear Form
-											</button>
-									</div>
-								</div>
-								<!-- End Tag Form -->
-							</template>
-
-							<template
-								v-if="
-									state.editing_category
-									&& state.editing_category.id == _category.id
-									&& state.editing_category.tags
-									&& state.editing_category.tags.length > 0
+									state.viewing_category
+									&& state.viewing_category.id == _category.id
+									&& state.viewing_category.tags
+									&& state.viewing_category.tags.length > 0
 								"
 							>
 
 								<div class="list-group my-5">
-									<div v-for="_tag in state.editing_category.tags"
+									<div class="mb-5 d-flex align-items-center justify-content-between">
+										<div class="ms-auto d-flex">
+											<div class="list-group-heading__action">
+												<button
+													type="button"
+													class="btn btn-success"
+													@click="newTag_init"
+												>
+													+ New Tag
+												</button>
+											</div>
+										</div>
+									</div>
+
+									<div v-for="_tag in state.viewing_category.tags"
 					                	:key="_tag.id"
 					                	class="list-group-item ps-5 py-3"
 					                	style="
@@ -493,8 +506,6 @@ function saveTag()
 				                		</div>
 			                		</div>
 
-
-
 								</div>
 							</template>
 						</div>
@@ -502,44 +513,139 @@ function saveTag()
                 </div>
             </div>
 
+			<!-- Start New Category Modal -->
+            <Modal id="modal_category_form">
+            	<template #title>
+		        	<span v-if="state.editing_category && state.editing_category.id">Edit Category</span>
+		        	<span v-else>Create Category</span>
+            	</template>
+            	<template #body>
+
+					<!-- Start Category Form -->
+					<div class="mb-3">
+						<label
+							for="select_tag_type"
+							class="form-label"
+							>
+		                    Select Category Type
+		                </label>
+		                <select
+		                    id="select_tag_type"
+		                    name="select_tag_type"
+
+		                    v-model="state.category.type_id"
+
+		                    :disabled="state.editing_category && state.editing_category.id"
+		                    class="form-select"
+		                >
+		                    <option
+		                    	v-for="tag_type in props.types"
+		                    	:value="tag_type.id"
+		                    	:key="tag_type.id"
+		                	>
+		                		{{ tag_type.name }}
+		                	</option>
+		                </select>
+
+					</div>
+
+					<div class="mb-3">
+						<label for="name" class="form-label">Category Name</label>
+						<input
+							id="name"
+							type="text"
+							class="form-control"
+							v-model="state.category.name"
+							>
+					</div>
+
+					<div class="mb-3">
+						<label for="description" class="form-label">Description</label>
+						<input
+							id="description"
+							type="text"
+							class="form-control"
+							v-model="state.category.description"
+							>
+					</div>
+					<!-- End Category Form -->
+
+            	</template>
+
+            	<template #footer>
+				    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+			        <button type="button" class="btn btn-success" @click="saveCategory">Create</button>
+
+            	</template>
+            </Modal>
+			<!-- End New Category Modal -->
+
+
+			<!-- New Tag Modal -->
+            <Modal id="modal_tag_form">
+            	<template #title>
+		        	<span v-if="state.editing_tag && state.editing_tag.id">Edit Tag</span>
+		        	<span v-else>Create Tag</span>
+            	</template>
+            	<template #body>
+            		<!-- Start Tag Form -->
+					<div class="mb-3">
+						<label for="name" class="form-label">Tag Name</label>
+						<input
+							id="name"
+							type="text"
+							class="form-control"
+							v-model="state.tag.name"
+							>
+					</div>
+
+					<div class="mb-3">
+						<label for="description" class="form-label">Description</label>
+						<input
+							id="description"
+							type="text"
+							class="form-control"
+							v-model="state.tag.description"
+							>
+					</div>
+					<!-- End Tag Form -->
+
+            	</template>
+            	<template #footer>
+			        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+			        <button type="button" class="btn btn-success" @click="saveTag">Confirm</button>
+
+            	</template>
+            </Modal>
+			<!-- End New Tag Modal -->
+
+
 			<!-- Confirm Delete Modal -->
-			<div class="modal fade" id="modal_category_delete_confirm" tabindex="-1" aria-labelledby="modalcategory_delete_confirm_label" aria-hidden="true">
-			  <div class="modal-dialog">
-			    <div class="modal-content">
-			      <div class="modal-header">
-			        <h5 class="modal-title" id="modal_category_delete_confirm_label">Delete a Category</h5>
-			        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-			      </div>
-			      <div class="modal-body">
+			<Modal id="modal_category_delete_confirm">
+				<template #title>
+			        Delete a Category
+				</template>
+				<template #body>
 			        Are you sure you want to delete this Tag Category?
-			      </div>
-			      <div class="modal-footer">
+				</template>
+				<template #footer>
 			        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
 			        <button type="button" class="btn btn-success" @click="deleteCategory">Confirm</button>
-			      </div>
-			    </div>
-			  </div>
-			</div>
+				</template>
+			</Modal>
 			<!-- End Confirm Delete Modal -->
 
 			<!-- Confirm Delete Modal -->
-			<div class="modal fade" id="modal_tag_delete_confirm" tabindex="-1" aria-labelledby="modaltag_delete_confirm_label" aria-hidden="true">
-			  <div class="modal-dialog">
-			    <div class="modal-content">
-			      <div class="modal-header">
-			        <h5 class="modal-title" id="modal_tag_delete_confirm_label">Delete a Tag</h5>
-			        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-			      </div>
-			      <div class="modal-body">
-			        Are you sure you want to delete this Tag?
-			      </div>
-			      <div class="modal-footer">
+			<Modal id="modal_tag_delete_confirm">
+				<template #title>Delete a Tag</template>
+				<template #body>
+					Are you sure you want to delete this Tag?
+				</template>
+				<template #footer>
 			        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
 			        <button type="button" class="btn btn-success" @click="deleteTag">Confirm</button>
-			      </div>
-			    </div>
-			  </div>
-			</div>
+				</template>
+			</Modal>
 			<!-- End Confirm Delete Modal -->
 
         </div>

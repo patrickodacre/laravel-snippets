@@ -13,8 +13,10 @@ class TagController extends Controller
 {
     public function index()
     {
+
         return Inertia::render('Tags', [
-            'categories' => TagCategory::with('tags')->get()
+            'categories' => TagCategory::with('tags')->get(),
+            'types' => TagCategory::typesById(),
         ]);
     }
 
@@ -25,16 +27,21 @@ class TagController extends Controller
     {
         Validator::make($request->all(), [
             'name' => 'required',
+            'type_id' => 'required',
         ])->validate();
 
-        $cat = TagCategory::create([
+        $category = TagCategory::create([
             'name' => $request->get('name'),
             'description' => $request->get('description'),
+            'type_id' => $request->get('type_id'),
         ]);
+
+        // categories are returned in index() with tags, so the UI expects this array
+        $category->tags = [];
 
         return response()
             ->json([
-                'category' => $cat,
+                'category' => $category,
             ], Response::HTTP_CREATED);
     }
 
@@ -50,7 +57,7 @@ class TagController extends Controller
 
         return response()
             ->json([
-                'category' => $cat,
+                'category' => $category,
             ], Response::HTTP_OK);
     }
 
