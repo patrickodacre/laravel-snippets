@@ -574,7 +574,10 @@ function saveTag()
 
             	<template #footer>
 				    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-			        <button type="button" class="btn btn-success" @click="saveCategory">Create</button>
+			        <button type="button" class="btn btn-success" @click="saveCategory">
+			        	<span v-if="state.editing_category && state.editing_category.id">Edit</span>
+			        	<span v-else>Create</span>
+			        </button>
 
             	</template>
             </Modal>
@@ -613,7 +616,10 @@ function saveTag()
             	</template>
             	<template #footer>
 			        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-			        <button type="button" class="btn btn-success" @click="saveTag">Confirm</button>
+			        <button type="button" class="btn btn-success" @click="saveTag">
+			        	<span v-if="state.editing_tag && state.editing_tag.id">Edit</span>
+			        	<span v-else>Create</span>
+			        </button>
 
             	</template>
             </Modal>
