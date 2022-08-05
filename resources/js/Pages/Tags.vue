@@ -83,10 +83,6 @@ function editCategory(_category)
 {
 	// avoid mutating by reference
 	state.category = JSON.parse(JSON.stringify(_category))
-	// here we WANT to mutate by reference
-	// so our tags list isn't reset when we do things
-	// like EDIT category after adding new tags
-	state.editing_category = _category
 
 	state.modal_category_form.show()
 }
