@@ -1,6 +1,7 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { reactive, onMounted } from 'vue'
+import Modal from '@/Shared/Modal.vue'
 
 const state = reactive({
 	editing_client: null,
@@ -9,15 +10,24 @@ const state = reactive({
 	client: newClient(),
 	clients: [],
 
-	modal_client_delete_confirm: null
+	modal_client_form: null,
+	modal_client_delete_confirm: null,
+
+	selected_tags: [],
 })
 
 const props = defineProps({
     clients: Array,
+    tags: Array,
 });
 
 onMounted(() => {
 	state.clients = props.clients
+
+	state.modal_client_form = new bootstrap.Modal('#modal_client_form', {})
+	state.modal_client_form._element.addEventListener('hide.bs.modal', () => {
+		cancelEdit()
+	})
 
 	state.modal_client_delete_confirm = new bootstrap.Modal('#modal_client_delete_confirm', {})
 
@@ -30,6 +40,13 @@ onMounted(() => {
 		state.deleting_client = null
 	})
 })
+
+function newClient_init()
+{
+	state.client = newClient()
+	state.editing_client = null
+	state.modal_client_form.show()
+}
 
 function newClient()
 {
@@ -46,6 +63,8 @@ function editClient(_client)
 	// avoid mutating by reference
 	state.editing_client = JSON.parse(JSON.stringify(_client))
 	state.client = JSON.parse(JSON.stringify(_client))
+	state.selected_tags = state.client.tags.map(t => t.id)
+	state.modal_client_form.show()
 }
 
 function deleteClient_init(client)
@@ -78,6 +97,7 @@ function cancelEdit()
 {
 	state.editing_client = null
 	state.client = newClient()
+	state.selected_tags = []
 }
 
 function saveClient()
@@ -85,7 +105,16 @@ function saveClient()
 	if (state.editing_client && state.editing_client.id)
 	{
 
-	    axios.put(route('clients_update', {client: state.editing_client.id}), state.client)
+	    axios.put(
+	    	route('clients_update', {client: state.editing_client.id}),
+	    	{
+	    		name_first: state.client.name_first,
+	    		name_last: state.client.name_last,
+	    		description: state.client.description,
+	    		email: state.client.email,
+	    		tags: state.selected_tags,
+		    }
+	    )
 	    .then(res => {
 	    	const k = res.data.client
 
@@ -97,6 +126,8 @@ function saveClient()
 	    		}
 	    	}
 
+	    	state.modal_client_form.hide()
+
 	    })
 	    .catch(err => {
 	    	debugger
@@ -106,12 +137,20 @@ function saveClient()
 		return
 	}
 
-    axios.post(route('clients_store', state.client))
+    axios.post(route('clients_store'), {
+    	name_first: state.client.name_first,
+    	name_last: state.client.name_last,
+    	description: state.client.description,
+    	email: state.client.email,
+    	tags: state.selected_tags,
+    })
 	    .then(res => {
 
 	    	// clear the form
 	    	state.client = newClient()
 	    	state.clients.push(res.data.client)
+
+	    	state.modal_client_form.hide()
 	    })
 	    .catch(err => {
 	    	debugger
@@ -132,86 +171,35 @@ function saveClient()
         <div class="py-12">
 	        <!-- Client Form -->
 			<div class="mb-3 p-4 bg-white shadow bg-body rounded w-75 ln-max-width mx-auto">
-				<div class="mx-auto">
-					<div class="px-2 mb-3">
+				<div class="
+					px-2
+					d-md-flex align-items-center justify-content-between">
+
+					<div class="flex-1">
 						<h2 class="heading">Manage Your Clients</h2>
-						<p class="">
+						<div class="sub-heading">
 							Use the form to create and edit Clients.
-						</p>
-					</div>
-					<div class="px-2 d-md-flex align-items-end mb-3">
-						<div class="flex-1 mb-3 mb-md-0 me-md-5">
-							<label for="name" class="form-label">Business Name or First Name</label>
-							<input
-								type="text"
-								class="form-control"
-								id="name_first"
-								placeholder="Acme Inc. or John"
-								v-model="state.client.name_first"
-								>
-						</div>
-
-						<div class="flex-1 mb-3 mb-md-0">
-							<label for="name" class="form-label">Last Name</label>
-							<input
-								type="text"
-								class="form-control"
-								id="name_last"
-								placeholder="Last Name"
-								v-model="state.client.name_last"
-								>
 						</div>
 					</div>
-
-					<div class="px-2 d-md-flex align-items-end mb-3">
-						<div class="flex-1 mb-3 mb-md-0 me-md-5">
-							<label for="name" class="form-label">Email</label>
-							<input
-								type="email"
-								class="form-control"
-								id="email"
-								placeholder="example@email.com"
-								v-model="state.client.email"
-								>
-						</div>
-					</div>
-
-					<div class="px-2 d-md-flex align-items-end mb-5">
-						<div class="flex-1 mb-3 mb-md-0">
-							<label for="name" class="form-label">Description</label>
-							<textarea
-								class="form-control"
-								rows=5
-								cols=40
-								id="description"
-								placeholder="Description"
-								v-model="state.client.description"
-								>
-							</textarea>
-						</div>
-					</div>
-
-					<div class="px-2 d-md-flex align-items-end">
-						<div class="mb-3 mb-md-0 me-md-5">
+					<div class="ms-auto d-md-flex align-items-center">
+						<div class="">
 							<button
 								type="button"
 								class="btn btn-success"
-								style="min-width:100px;"
-								@click="saveClient"
-								>
-								Save
+								@click="newClient_init"
+							>
+								+ New Client
 							</button>
 						</div>
-						<div class="ms-3 mb-3 mb-md-0">
-							<button
-								type="button"
-								class="btn btn-outline-dark"
-								@click="cancelEdit"
-								>
-									Cancel
-								</button>
-						</div>
 					</div>
+
+				</div>
+
+
+
+
+				<div class="mx-auto d-lg-flex">
+
 				</div>
 			</div>
 
@@ -272,24 +260,128 @@ function saveClient()
                 </div>
             </div>
 
+
+
+			<!-- Start New Client Modal -->
+            <Modal id="modal_client_form">
+            	<template #title>
+		        	<span v-if="state.editing_client && state.editing_client.id">Edit Client</span>
+		        	<span v-else>Create Client</span>
+            	</template>
+            	<template #body>
+
+					<div class="mb-4">
+						<label for="name" class="form-label">Business Name or First Name</label>
+						<input
+							type="text"
+							class="form-control"
+							id="name_first"
+							placeholder="Acme Inc. or John"
+							v-model="state.client.name_first"
+							>
+					</div>
+
+					<div class="mb-4">
+						<label for="name" class="form-label">Last Name</label>
+						<input
+							type="text"
+							class="form-control"
+							id="name_last"
+							placeholder="Last Name"
+							v-model="state.client.name_last"
+							>
+					</div>
+
+
+					<div class="mb-4">
+						<label for="name" class="form-label">Email</label>
+						<input
+							type="email"
+							class="form-control"
+							id="email"
+							placeholder="example@email.com"
+							v-model="state.client.email"
+							>
+					</div>
+
+					<div class="mb-4">
+						<label for="name" class="form-label">Description</label>
+						<textarea
+							class="form-control"
+							rows=5
+							cols=40
+							id="description"
+							placeholder="Description"
+							v-model="state.client.description"
+							>
+						</textarea>
+					</div>
+
+
+					<!-- Right -->
+					<div class="mb-5">
+
+						<!-- Select Tags -->
+						<label
+							for="select_tags"
+							class="col-form-label form-check-label"
+							>
+                            Select Tags
+                        </label>
+                        <select
+                            id="select_tags"
+                            name="select_tags"
+                            v-if="props.tags.length > 0"
+
+							multiple
+                            v-model="state.selected_tags"
+
+                            class="form-select w-full bg-white border border-gray-200 px-3 py-2 rounded outline-none">
+	                        <option
+	                        	v-for="tag in props.tags"
+	                        	:value="tag.id"
+	                        	:key="tag.id"
+                        	>
+		                        {{ tag.name }}
+		                    </option>
+	                    </select>
+	                    <div
+		                    v-else
+		                    class=""
+		                    >
+	                    	You don't have any tags.
+	                    </div>
+
+					</div>
+
+
+
+            	</template>
+
+            	<template #footer>
+				    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+			        <button type="button" class="btn btn-success" @click="saveClient">
+			        	<span v-if="state.editing_client && state.editing_client.id">Edit</span>
+			        	<span v-else>Create</span>
+			        </button>
+
+            	</template>
+            </Modal>
+			<!-- End New Client Modal -->
+
 			<!-- Confirm Delete Modal -->
-			<div class="modal fade" id="modal_client_delete_confirm" tabindex="-1" aria-labelledby="modal_client_delete_confirm_label" aria-hidden="true">
-			  <div class="modal-dialog">
-			    <div class="modal-content">
-			      <div class="modal-header">
-			        <h5 class="modal-title" id="modal_client_delete_confirm_label">Delete a Client</h5>
-			        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-			      </div>
-			      <div class="modal-body">
+			<Modal id="modal_client_delete_confirm">
+				<template #title>
+					Delete a Client
+				</template>
+				<template #body>
 			        Are you sure you want to delete this Client?
-			      </div>
-			      <div class="modal-footer">
+				</template>
+				<template #footer>
 			        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-			        <button type="button" class="btn btn-success" @click="deleteClient">Confirm</button>
-			      </div>
-			    </div>
-			  </div>
-			</div>
+					<button type="button" class="btn btn-success" @click="deleteClient">Confirm</button>
+				</template>
+			</Modal>
 			<!-- End Confirm Delete Modal -->
 
         </div>
