@@ -69,7 +69,7 @@ class TagController extends Controller
             return response()
                 ->json([
                     'message' => 'Cannot delete a category that has tags.'
-                ], Response::HTTP_UNPROCESSIBLE_ENTITY);
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
 
