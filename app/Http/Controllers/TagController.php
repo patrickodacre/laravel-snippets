@@ -63,6 +63,16 @@ class TagController extends Controller
 
     public function deleteCategory(TagCategory $category)
     {
+
+        if (!$category->tags->count() > 0)
+        {
+            return response()
+                ->json([
+                    'message' => 'Cannot delete a category that has tags.'
+                ], Response::HTTP_UNPROCESSIBLE_ENTITY);
+        }
+
+
         $category->delete();
 
         return response()
