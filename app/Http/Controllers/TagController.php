@@ -32,7 +32,7 @@ class TagController extends Controller
 
         $category = TagCategory::create([
             'name' => $request->get('name'),
-            'description' => $request->get('description'),
+            'description' => $request->get('description', null),
             'type_id' => $request->get('type_id'),
         ]);
 
@@ -93,7 +93,7 @@ class TagController extends Controller
 
         $tag = Tag::create([
             'name' => $request->get('name'),
-            'description' => $request->get('description'),
+            'description' => $request->get('description', null),
             'category_id' => $request->get('category_id'),
         ]);
 
