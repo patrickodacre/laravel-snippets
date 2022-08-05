@@ -64,7 +64,7 @@ class TagController extends Controller
     public function deleteCategory(TagCategory $category)
     {
 
-        if (!$category->tags->count() > 0)
+        if ($category->tags->count() > 0)
         {
             return response()
                 ->json([
