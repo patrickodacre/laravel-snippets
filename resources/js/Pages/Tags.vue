@@ -439,8 +439,6 @@ function saveTag()
 								v-if="
 									state.viewing_category
 									&& state.viewing_category.id == _category.id
-									&& state.viewing_category.tags
-									&& state.viewing_category.tags.length > 0
 								"
 							>
 
