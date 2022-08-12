@@ -34,6 +34,103 @@ class ClientController extends Controller
         ]);
     }
 
+    public function grid()
+    {
+        $client_tags = TagCategory::where('type_id', TagCategory::TYPE_CLIENT)
+            ->with('tags')
+            ->get()
+            ->reduce(function ($carry, $category) {
+
+                $carry = array_merge($carry, $category->tags->toArray());
+
+                return $carry;
+            }, []);
+
+
+        $data = [
+            'tags' => $client_tags,
+        ];
+
+        return Inertia::render('ClientGrid', $data);
+    }
+
+    // POST request
+    public function gridData(Request $request)
+    {
+        $filters = $request->get('filters', []);
+        $config = $request->get('config', []);
+
+        $query = Client::with(['tags']);
+
+        // apply filters
+        if (count($filters) > 0)
+        {
+
+            if ($search = ($filters['search'] ?? null))
+            {
+
+                // allow alphanumeric and characters used in emails
+                $terms_cleaned = preg_replace("/[^a-zA-Z0-9\(\)\-\+\_@\.]+/", " ", $search);
+
+                $terms = array_reduce(
+                    explode(" ", $terms_cleaned),
+                    function($carry, $term) {
+                        $term = trim($term);
+
+                        if(!empty($term))
+                        {
+                            $carry[] = strtolower($term);
+                        }
+
+                        return $carry;
+                    },
+                    []
+                );
+
+                if (count($terms) > 0)
+                {
+                    $query->where(function ($q) use ($terms) {
+
+                        $whereType = 'where';
+                        foreach ($terms as $term)
+                        {
+
+                            $q->{$whereType}('name_first', 'LIKE', '%' . $term . '%');
+
+                            $whereType = 'orWhere';
+
+                            $q->{$whereType}('name_last', 'LIKE', '%' . $term . '%');
+                            $q->{$whereType}('email', 'LIKE', '%' . $term . '%');
+                            $q->{$whereType}('description', 'LIKE', '%' . $term . '%');
+
+                        }
+
+                    });
+
+                }
+
+            }
+
+            if ($tags = ($filters['tags'] ?? null))
+            {
+                $whereType = $search ? 'orWhere' : 'where';
+
+                $query->{$whereType}(function ($query) use ($tags) {
+                    $query->whereHas('tags', function ($q) use ($tags) {
+                        $q->whereIn('tags.id', $tags);
+                    });
+                });
+            }
+        }
+
+        $clients = $query->paginate($config['per_page'] ?? 1);
+
+        return response()
+            ->json([
+                'clients' => $clients,
+            ], Response::HTTP_OK);
+    }
+
     public function store(Request $request)
     {
 

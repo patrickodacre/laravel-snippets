@@ -54,12 +54,18 @@ const logout = () => {
                                 <JetNavLink :href="route('dashboard')" :active="route().current('dashboard')">
                                     Dashboard
                                 </JetNavLink>
-                                <JetNavLink :href="route('clients', $page.props.user.current_team.id)" :active="route().current('clients')">
+                                <JetNavLink :href="route('clients')" :active="route().current('clients')">
                                     Clients
                                 </JetNavLink>
-                                <JetNavLink :href="route('tags', $page.props.user.current_team.id)" :active="route().current('tags')">
+
+                                <JetNavLink :href="route('tags')" :active="route().current('tags')">
                                     Tags
                                 </JetNavLink>
+
+                                <JetNavLink :href="route('clients_grid')" :active="route().current('clients_grid')">
+                                    Clients Grid
+                                </JetNavLink>
+
 
                             </div>
                         </div>
@@ -78,6 +84,8 @@ const logout = () => {
             <main>
                 <slot />
             </main>
+
         </div>
     </div>
+
 </template>
