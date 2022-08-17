@@ -1,10 +1,12 @@
 <script setup>
 import axios from 'axios'
 import AppLayout from '@/Layouts/AppLayout.vue'
-import { reactive, onMounted } from 'vue'
+import { reactive, onMounted, watch } from 'vue'
 import Modal from '@/Shared/Modal.vue'
 import VPagination from "@hennge/vue3-pagination";
 import "@hennge/vue3-pagination/dist/vue3-pagination.css";
+
+const local_storage_column_key = 'ln_client_grid_columns'
 
 const props = defineProps({
 	tags: Array,
@@ -27,6 +29,29 @@ const state = reactive({
 		search: null,
 	},
 
+	columns: {
+		name_first: {
+			label: "First Name",
+			is_visible: true,
+		},
+		name_last: {
+			label: "Last Name",
+			is_visible: true,
+		},
+		email: {
+			label: "Email",
+			is_visible: true,
+		},
+		description: {
+			label: "Description",
+			is_visible: true,
+		},
+		tags: {
+			label: "Tags",
+			is_visible: true,
+		},
+	},
+
     // pagination
     pagination : {
     	current_page: 1,
@@ -36,9 +61,16 @@ const state = reactive({
     },
 })
 
+watch(state.columns, (new_value, old_value) => {
+	localStorage.setItem(local_storage_column_key, JSON.stringify(new_value))
+})
+
 onMounted(() => {
 
 	getClients()
+
+	state.modal_settings = new bootstrap.Modal('#modal_settings', {})
+	state.modal_settings._element.addEventListener('hide.bs.modal', () => {})
 
 	state.modal_client_form = new bootstrap.Modal('#modal_client_form', {})
 	state.modal_client_form._element.addEventListener('hide.bs.modal', () => {
@@ -55,7 +87,25 @@ onMounted(() => {
 		state.client = newClient()
 		state.deleting_client = null
 	})
+
+	// intiialize columns
+	let columns = localStorage.getItem(local_storage_column_key)
+
+	if (columns)
+	{
+		columns = JSON.parse(columns)
+
+		for (const column_name in columns)
+		{
+			state.columns[column_name] = columns[column_name]
+		}
+	}
 })
+
+function openSettings()
+{
+	state.modal_settings.show()
+}
 
 function getClients(page = state.pagination.current_page)
 {
@@ -288,15 +338,24 @@ function saveClient()
 			<!-- Client Grid -->
 
 			<div class="mb-3 bg-white shadow bg-body rounded w-75 ln-max-width mx-auto" style="overflow-x: scroll;">
+				<div class="d-flex align-items-center justify-content-end p-2">
+    				<button
+    					class="btn btn-outline-secondary bg-white"
+    					type="button"
+    					@click="openSettings"
+    					>
+    						Settings
+					</button>
+				</div>
 				<table class="table table-striped">
 					<thead>
 					    <tr>
 						    <th scope="col">Actions</th>
-						    <th scope="col">First Name</th>
-						    <th scope="col">Last Name</th>
-						    <th scope="col">Email</th>
-						    <th scope="col">Description</th>
-						    <th scope="col">Tags</th>
+						    <th v-show="state.columns.name_first.is_visible" scope="col">First Name</th>
+						    <th v-show="state.columns.name_last.is_visible" scope="col">Last Name</th>
+						    <th v-show="state.columns.email.is_visible" scope="col">Email</th>
+						    <th v-show="state.columns.description.is_visible" scope="col">Description</th>
+						    <th v-show="state.columns.tags.is_visible" scope="col">Tags</th>
 					    </tr>
 				  </thead>
 				  <tbody>
@@ -306,7 +365,6 @@ function saveClient()
 				      <th scope="row"
 				      	class="d-flex align-items-center"
 				      	style="
-				      		min-width: 120px;
 					      	border-right: 1px solid #d9d9d9
 				      	"
 				      	>
@@ -334,11 +392,11 @@ function saveClient()
 
 
 				      </th>
-				      <td style="min-width: 120px;">{{ client.name_first }}</td>
-				      <td style="min-width: 120px;">{{ client.name_last }}</td>
-				      <td style="min-width: 120px;">{{ client.email }}</td>
-				      <td style="min-width: 150px;">{{ client.description }}</td>
-				      <td style="min-width: 150px;">{{ client.tags.map(t => t.name).join(', ') }}</td>
+				      <td v-show="state.columns.name_first.is_visible" style="">{{ client.name_first }}</td>
+				      <td v-show="state.columns.name_last.is_visible" style="">{{ client.name_last }}</td>
+				      <td v-show="state.columns.email.is_visible" style="">{{ client.email }}</td>
+				      <td v-show="state.columns.description.is_visible" style="">{{ client.description }}</td>
+				      <td v-show="state.columns.tags.is_visible" style="">{{ client.tags.map(t => t.name).join(', ') }}</td>
 				    </tr>
 				  </tbody>
 				</table>
@@ -370,6 +428,34 @@ function saveClient()
 
 
 			</div>
+
+
+			<!-- Confirm Settings Modal -->
+			<Modal id="modal_settings">
+				<template #title>
+					Settings
+				</template>
+				<template #body>
+					<div
+						v-for="(config, column) in state.columns"
+						:key="column"
+						class="d-flex align-items-center">
+							<input
+								v-model="config.is_visible"
+								:id="column"
+								class="me-3"
+								type="checkbox"
+								/>
+							<label :for="column">{{ config.label }}</label>
+					</div>
+
+
+				</template>
+				<template #footer>
+			        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Done</button>
+				</template>
+			</Modal>
+			<!-- End Confirm Settings Modal -->
 
 
 			<!-- Start New Client Modal -->
