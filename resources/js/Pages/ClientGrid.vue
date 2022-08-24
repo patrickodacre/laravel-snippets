@@ -1,7 +1,7 @@
 <script setup>
 import axios from 'axios'
 import AppLayout from '@/Layouts/AppLayout.vue'
-import { reactive, onMounted, watch } from 'vue'
+import { reactive, onMounted, watch, computed } from 'vue'
 import Modal from '@/Shared/Modal.vue'
 import VPagination from "@hennge/vue3-pagination";
 import "@hennge/vue3-pagination/dist/vue3-pagination.css";
@@ -19,6 +19,8 @@ const state = reactive({
 	client: newClient(),
 	clients: [],
 	tags: [],
+	tag_filter_terms: "",
+	filtered_tag_chips: [],
 
 	modal_client_form: null,
 	modal_client_delete_confirm: null,
@@ -55,10 +57,21 @@ const state = reactive({
     // pagination
     pagination : {
     	current_page: 1,
-    	per_page: 1,
+    	per_page: 10,
 	    total_number_of_pages: 0,
 	    range: 5,
     },
+})
+
+const tag_filter_options = computed(() => {
+	if (! state.tag_filter_terms)
+	{
+		return props.tags
+	}
+
+	const search = state.tag_filter_terms.toLowerCase()
+
+	return props.tags.filter(t => t.name.toLowerCase().indexOf(search) > -1)
 })
 
 watch(state.columns, (new_value, old_value) => {
@@ -107,8 +120,44 @@ function openSettings()
 	state.modal_settings.show()
 }
 
+// start Filter Tags
+function updateFilteredTagChips(tag)
+{
+    let found = false
+
+    // already showing a chip?
+    for (let i = 0; i < state.filtered_tag_chips.length; i++)
+    {
+        if (state.filtered_tag_chips[i].id == tag.id)
+        {
+            found = true
+        }
+    }
+
+    if (found) return
+
+    state.filtered_tag_chips.push(JSON.parse(JSON.stringify(tag)))
+
+    getClients()
+
+}
+
+function removeChip(chip)
+{
+    // remove from chips
+    state.filtered_tag_chips = state.filtered_tag_chips
+        .filter(c => c.id != chip.id)
+
+    getClients()
+
+}
+// end Filter Tags
+
+
 function getClients(page = state.pagination.current_page)
 {
+	state.filters.tags = state.filtered_tag_chips.map(tag => tag.id)
+
 	axios.post('/clients/grid-data', {
 		filters: state.filters,
 		config: {
@@ -306,33 +355,73 @@ function saveClient()
 					</div>
 					<div class="col-md-6">
 
-
-						<!-- Filter for tags -->
-						<label
-							for="filters.tags"
-							class="form-label"
+						<!-- Start Filter for Tags -->
+						<div class="mb-2 p-0"
+							style=" border-bottom: 1px solid #d5d5d5;"
 							>
-	                        Filter for Tags
-	                    </label>
-	                    <select
-	                        id="filters.tags"
-	                        name="filters.tags"
+							<input
+								class="form-label mb-0"
+								style="border: none;"
+								type="text"
+								placeholder="Filter for Tags"
+								v-model="state.tag_filter_terms"
+								>
+						</div>
+	                    <ul
+		                    class="list-group mb-5"
 	                        v-if="props.tags.length > 0"
-
-							multiple
-	                        v-model="state.filters.tags"
-
-	                        class="form-select w-full bg-white border border-gray-200 px-3 py-2 rounded outline-none">
-	                        <option
-	                        	v-for="tag in props.tags"
+	                        >
+	                        <li class="list-group-item"
+	                        	v-for="tag in tag_filter_options"
 	                        	:value="tag.id"
 	                        	:key="tag.id"
+	                        	@click="updateFilteredTagChips(tag)"
 	                    	>
 		                        {{ tag.name }}
-		                    </option>
-		                    </select>
+		                    </li>
+	                    </ul>
+
+	                    <div class="">
+                            <div class="form-group mb-3 chips">
+                                <div class="d-flex align-items-center justify-content-start">
+                                    <div
+                                        class="ms-1 me-1"
+                                        v-for="chip in state.filtered_tag_chips"
+                                        :key="chip.id"
+                                        >
+                                        <button
+                                        	class="btn btn-success"
+                                            @click="removeChip(chip)"
+                                        >
+	                                        @{{ chip.name }}
+	                                    </button>
+                                    </div>
+                                </div>
+                            </div>
+
+	                    </div>
+	                    <!-- End Filter for Tags -->
+
+
 					</div>
 				</div>
+
+
+				<div class="
+					mt-3
+					d-flex align-items-center justify-content-end">
+					<div class="">
+						<button
+							class="btn btn-primary"
+							@click="getClients"
+						>
+							Search
+						</button>
+					</div>
+				</div>
+
+
+
 			</div>
 
 			<!-- Client Grid -->
