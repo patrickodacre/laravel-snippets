@@ -2,7 +2,7 @@
 import { reactive, computed } from 'vue'
 
 const state = reactive({
-	baseClasses: [ 'modal', 'fade' ]
+	baseClasses: [ 'modal-dialog', 'modal-dialog-centered' ]
 })
 
 const props = defineProps({
@@ -17,13 +17,13 @@ const finalClasses = computed(() => {
 </script>
 
 <template>
-	<div :class="finalClasses"
+	<div class="modal fade"
 		:id="props.id"
 		tabindex="-1"
 		:aria-labelledby="props.id + '_label'"
 		aria-hidden="true"
 	>
-		<div class="modal-dialog">
+		<div :class="finalClasses">
 		    <div class="modal-content">
 			    <div class="modal-header">
 			        <h5 class="modal-title" :id="props.id + '_label'">
